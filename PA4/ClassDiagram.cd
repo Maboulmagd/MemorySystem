@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="Free">
+    <Position X="5.5" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>gAAAAACAAAAAAAAAAAAAAAAABAkAAAAQAAgAAACAAAA=</HashCode>
+      <FileName>Free.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Heap">
+    <Position X="2.75" Y="1" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Nested Types" Collapsed="false" />
+    </Compartments>
+    <NestedTypes>
+      <Struct Name="Heap::Stats" Collapsed="true">
+        <TypeIdentifier>
+          <NewMemberFileName>Heap.h</NewMemberFileName>
+        </TypeIdentifier>
+      </Struct>
+    </NestedTypes>
+    <TypeIdentifier>
+      <HashCode>IAAAAAAACAAIAAAAAAAAAAAAAEsAAAABAAAAAAAAAgA=</HashCode>
+      <FileName>Heap.h</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="pUsedHead" />
+      <Field Name="pFreeHead" />
+      <Field Name="pNextFit" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Mem">
+    <Position X="0.5" Y="1" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>QMAAAAAgBEAgAwABAAQAiAKAlAgAAIAQAAAgQCAgaAI=</HashCode>
+      <FileName>Mem.h</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Field Name="pHeap" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="Used">
+    <Position X="5.5" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>gAIAAAAAAAAAAAAAAAAAAAAABAMAAAAQAAAAAACAABA=</HashCode>
+      <FileName>Used.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

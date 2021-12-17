@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="_Framework">
+      <UniqueIdentifier>{593ae2fd-3512-4dd6-ae52-42ce0cf59e5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_Tests">
+      <UniqueIdentifier>{c1776a87-ec6f-4138-bdc6-272f7ff41428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Do NOT Modify">
+      <UniqueIdentifier>{7bf6f15a-b713-48cd-8258-ad790e90bbae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Modify and Add files here">
+      <UniqueIdentifier>{7733924c-1d9f-403f-96c8-3b7c1d83ae3a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\Test\Mem_Test_01.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_02.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_03.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_04.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_05.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_06.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="Heap.cpp">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClCompile>
+    <ClCompile Include="Mem.cpp">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_07.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_08.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_09.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_10.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_11.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_12.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_13.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_14.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_15.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_16.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Framework\FileIO.cpp">
+      <Filter>_Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Framework\Timer.cpp">
+      <Filter>_Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Framework\UnitTest.cpp">
+      <Filter>_Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Test\Mem_Test_17_Stress.cpp">
+      <Filter>_Tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Main\main.cpp">
+      <Filter>Source Files\Do NOT Modify</Filter>
+    </ClCompile>
+    <ClCompile Include="Free.cpp">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClCompile>
+    <ClCompile Include="Used.cpp">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClCompile>
+    <ClCompile Include="MemReadOnly.cpp">
+      <Filter>Source Files\Do NOT Modify</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Heap.h">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClInclude>
+    <ClInclude Include="Mem.h">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClInclude>
+    <ClInclude Include="Types.h">
+      <Filter>Source Files\Do NOT Modify</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\FileIO.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\Framework.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\MemTracker.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\MemTrackerMain.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\Timer.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\Trace.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\UnitTest.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="Block.h">
+      <Filter>Source Files\Do NOT Modify</Filter>
+    </ClInclude>
+    <ClInclude Include="Free.h">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClInclude>
+    <ClInclude Include="Used.h">
+      <Filter>Source Files\Modify and Add files here</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Framework\FrameworkVersion.h">
+      <Filter>_Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Test\_UnitTestConfiguration.h">
+      <Filter>_Tests</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Test\__DO NOT MODIFY__">
+      <Filter>_Tests</Filter>
+    </None>
+    <None Include="ClassDiagram.cd" />
+    <None Include="..\Framework\__DO NOT MODIFY__">
+      <Filter>_Framework</Filter>
+    </None>
+  </ItemGroup>
+</Project>

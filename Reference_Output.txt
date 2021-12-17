@@ -1,0 +1,52 @@
+
+
+************************************
+**      Framework: 2.21           **
+**   C++ Compiler: 191627025      **
+**    Windows SDK: 10.0.17134.0   **
+************************************
+
+--------------------------------
+    Memory Tracking: start()    
+--------------------------------
+
+------------------- Testing DEBUG ------------------------
+
+      Mem Lib: stress test: 328.872894 ms 
+Custom Memory: stress test: 168.243851 ms 
+              times faster: 1.954739 
+
+ (x86 Debug) testPass: 17
+ (x86 Debug) testFail: 0
+
+ testCount: 17
+indvChecks: 2536
+
+-----------------
+
+--------------------------------
+    Memory Tracking: passed 
+--------------------------------
+    Memory Tracking: end()      
+--------------------------------
+
+
+************************************
+**      Framework: 2.21           **
+**   C++ Compiler: 191627025      **
+**    Windows SDK: 10.0.17134.0   **
+************************************
+
+------------------- Testing RELEASE ----------------------
+
+      Mem Lib: stress test: 91.212898 ms 
+Custom Memory: stress test: 18.477905 ms 
+              times faster: 4.936322 
+
+ (x86 Release) testPass: 17
+ (x86 Release) testFail: 0
+
+ testCount: 17
+indvChecks: 2536
+
+-----------------
