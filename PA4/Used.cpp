@@ -8,6 +8,10 @@
 #include "Free.h"
 #include "Used.h"
 
-// Add code here
+Used::Used(const uint32_t block_size) : pUsedNext(nullptr), pUsedPrev(nullptr), mBlockSize(block_size), mType(Block::Used), mAboveBlockFree(false), pad(0)
+{
+}
 
 // ---  End of File ---------------
+
+

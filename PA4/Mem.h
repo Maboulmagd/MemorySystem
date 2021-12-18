@@ -23,10 +23,16 @@ public:
 	void dump();
 
 	// implement these functions
-	void free( void * const data );
-	void *malloc( const uint32_t size );// size EXCLUDES the size of what will become a used header, just the raw block size.
+	void free( void * const data );// data points to an address that is at the END of a USED hdr.
+	void *malloc( const uint32_t size );// size EXCLUDES the size of what will become a used header, just the raw block size, return end of header to new block!
 	void initialize( );
 
+private:
+	Free* GetFreeBlock(const uint32_t block_size_required);// block_size_required EXCLUDES the free header size
+	void InsertUsedBlock(Used* used_block);// Used blocks are unsorted, and are just pushed in the beginning of the used list
+
+	void UpdateHeapStatisticsAfterMalloc(const uint32_t size);
+	void UpdateHeapStatisticsAfterFree(const uint32_t size);
 
 private:
 	Heap	*pHeap;

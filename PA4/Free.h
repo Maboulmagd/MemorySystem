@@ -28,8 +28,6 @@ public:
 	                              //    if(AboveBlock is type free) -> true 
 	                              //    if(AboveBlock is type used) -> false 
 	uint16_t    pad;              // future use
-
-
 };
 
 #endif 
