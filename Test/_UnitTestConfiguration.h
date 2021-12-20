@@ -12,7 +12,7 @@
 #define Mem1_Initialize_Test_Enable                        true
 #define Mem2_Allocate_Everything_Test_Enable               true
 #define Mem3_Allocate_Everything_Free_it_Test_Enable       false
-#define Mem4_Partial_allocate_Test_Enable                  false
+#define Mem4_Partial_allocate_Test_Enable                  true
 #define Mem5_Partial_allocate_free_Test_Enable             false
 #define Mem6_Allocate_3_bottom_up_free_Test_Enable         false
 #define Mem7_Allocate_3_Top_down_free_Test_Enable          false
