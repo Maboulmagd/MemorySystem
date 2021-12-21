@@ -29,9 +29,14 @@ public:
 
 private:
 	Free* GetFreeBlock(const uint32_t block_size_required);// block_size_required EXCLUDES the free header size
-	void RemoveFreeBlock(Free* free_block);
+	void RemoveFreeBlock(Free* free_block_to_remove);
 	void InsertUsedBlock(Used* used_block_to_insert);// Used blocks are unsorted, and are just pushed in the beginning of the used list
 	void InsertFreeBlock(Free* free_block_to_insert);// Free blocks are sorted in ASC memory address
+	void RemoveUsedBlock(Used* used_block_to_remove);
+	
+	void CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_free_block, Free* next_free_block);
+	void CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_block);
+	void CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block);
 
 	void UpdateHeapStatisticsAfterPerfectMalloc(const uint32_t malloc_size);
 	void UpdateHeapStatisticsAfterPartialMalloc(const uint32_t malloc_size);
