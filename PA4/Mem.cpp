@@ -180,6 +180,13 @@ void Mem::free(void * const data) {
 		coalesce_with_below_free_block = true;
 		next_free_block->mAboveBlockFree = true;
 	}
+	// If the block directly below new_free_block is a USED block, set its mAboveBlockFree flag to true
+	else if (new_free_block_end < pHeap->mStats.heapBottomAddr) {
+		Used* used_block_below_new_free_block = reinterpret_cast<Used*>(new_free_block_end);
+		if (used_block_below_new_free_block->mType == Block::Used) {
+			used_block_below_new_free_block->mAboveBlockFree = true;
+		}
+	}
 
 	if (coalesce_with_above_free_block && coalesce_with_below_free_block) {
 		CoalesceWithAboveAndBelowFreeBlocks(new_free_block->pFreePrev, new_free_block, new_free_block->pFreeNext);
@@ -236,12 +243,17 @@ void Mem::RemoveFreeBlock(Free* free_block_to_remove) {
 
 	if (pHeap->pFreeHead == free_block_to_remove) {// Case 1: block WAS the very first block in the free list
 		pHeap->pFreeHead = pHeap->pFreeHead->pFreeNext;
+
+		if (pHeap->pFreeHead != nullptr) {
+			pHeap->pFreeHead->pFreePrev = nullptr;
+		}
+
 		return;
 	}
 
 	// Fix ptr's for prev and next blocks
 	if (free_block_to_remove->pFreePrev != nullptr) {
-		free_block_to_remove->pFreePrev = free_block_to_remove->pFreeNext;
+		free_block_to_remove->pFreePrev->pFreeNext = free_block_to_remove->pFreeNext;
 	}
 
 	if (free_block_to_remove->pFreeNext != nullptr) {
@@ -351,12 +363,17 @@ void Mem::RemoveUsedBlock(Used* used_block_to_remove) {
 
 	if (pHeap->pUsedHead == used_block_to_remove) {// Case 1: block WAS the very first block in the used list
 		pHeap->pUsedHead = pHeap->pUsedHead->pUsedNext;
+
+		if (pHeap->pUsedHead != nullptr) {
+			pHeap->pUsedHead->pUsedPrev = nullptr;
+		}
+
 		return;
 	}
 
 	// Fix ptr's for prev and next blocks
 	if (used_block_to_remove->pUsedPrev != nullptr) {
-		used_block_to_remove->pUsedPrev = used_block_to_remove->pUsedNext;
+		used_block_to_remove->pUsedPrev->pUsedNext = used_block_to_remove->pUsedNext;
 	}
 
 	if (used_block_to_remove->pUsedNext != nullptr) {
@@ -389,7 +406,7 @@ void Mem::CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_f
 	// Create the new large free block, along with its secret ptr and insert it
 	new_large_free_block = placement_new(new_large_free_block, Free, new_large_free_block_size);
 
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size);
+	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr));
 	SecretPtr* secret_ptr = placement_new(secret_ptr_addr, SecretPtr, new_large_free_block);
 	Trace::out("secret_ptr address: %p\n", secret_ptr);
 
@@ -427,7 +444,7 @@ void Mem::CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_block
 	// Create the new large free block, along with its secret ptr
 	new_large_free_block = placement_new(new_large_free_block, Free, new_large_free_block_size);
 
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size);
+	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr));
 	SecretPtr* secret_ptr = placement_new(secret_ptr_addr, SecretPtr, new_large_free_block);
 	Trace::out("secret_ptr address: %p\n", secret_ptr);
 
@@ -454,7 +471,7 @@ void Mem::CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block
 
 	// Check if we'll need to update our next fit ptr to point to new_large_free_block at the end
 	bool update_next_fit_ptr = false;
-	if (pHeap->pNextFit == nullptr || pHeap->pNextFit == new_free_block) {
+	if (pHeap->pNextFit == nullptr || pHeap->pNextFit == next_free_block) {
 		update_next_fit_ptr = true;
 	}
 
@@ -465,7 +482,7 @@ void Mem::CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block
 	// Create the new large free block, along with its secret ptr
 	new_large_free_block = placement_new(new_large_free_block, Free, new_large_free_block_size);
 
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size);
+	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr));
 	SecretPtr* secret_ptr = placement_new(secret_ptr_addr, SecretPtr, new_large_free_block);
 	Trace::out("secret_ptr address: %p\n", secret_ptr);
 
