@@ -34,9 +34,9 @@ private:
 	void InsertFreeBlock(Free* free_block_to_insert);// Free blocks are sorted in ASC memory address
 	void RemoveUsedBlock(Used* used_block_to_remove);
 	
-	void CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_free_block, Free* next_free_block);
-	void CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_block);
-	void CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block);
+	Free* CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_free_block, Free* next_free_block);
+	Free* CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_block);
+	Free* CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block);
 
 	void UpdateHeapStatisticsAfterPerfectMalloc(const uint32_t malloc_size);
 	void UpdateHeapStatisticsAfterPartialMalloc(const uint32_t malloc_size);
