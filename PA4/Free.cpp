@@ -9,6 +9,8 @@
 #include "Free.h"
 #include "Block.h"
 
-// Add magic here
+Free::Free(const uint32_t block_size) : pFreeNext(nullptr), pFreePrev(nullptr), mBlockSize(block_size), mType(Block::Free), mAboveBlockFree(false), pad(0)
+{
+}
 
 // ---  End of File ---------------
