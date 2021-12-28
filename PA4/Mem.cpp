@@ -97,7 +97,7 @@ void* Mem::malloc(const uint32_t size) {
 			Free* new_free_block = placement_new(new_free_block_hdr_start, Free, new_free_block_size);
 			InsertFreeBlock(new_free_block);
 
-			// NOTES: We know that the block directly above new_free_block is NOT a free block, so leave the mAboveBlockFlag as is (false).
+			// NOTE: We know that the block directly above new_free_block is NOT a free block, so leave the mAboveBlockFlag as is (false).
 			//		 We ALSO know that the block directly below this new free block (if we're not at the end of the heap) CANNOT be a free block, since 
 			//		 the OLD free block that we just removed would've been coalesced with it!
 
@@ -396,6 +396,10 @@ Free* Mem::CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_
 	if (pHeap->pNextFit == nullptr || pHeap->pNextFit == next_free_block) {
 		update_next_fit_ptr = true;
 	}
+
+	// TODO Check out a new branch, call it optimizations, and I think a great optimization is to add new free blocks to the free list in a smarter way.
+	//		In this case, we know that we are coalescing 3 free blocks, and so, we just need to grab the previous free block of prev_free_block, and the next free block
+	//		of next_free_block, and insert our new_large_free_block, between those 2 free blocks, so as to avoid looping through the free block list to insert it!
 
 	// Now remove all 3 FREE blocks from our free list
 	RemoveFreeBlock(prev_free_block);
