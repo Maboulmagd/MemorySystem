@@ -34,13 +34,14 @@ private:
 	void InsertFreeBlock(Free* free_block_to_insert);// Free blocks are sorted in ASC memory address
 	void RemoveUsedBlock(Used* used_block_to_remove);
 	
+	// NOTE In reality, new_free_block is not a free block, it is still the USED block, so we're just passing in the memory address really
 	Free* CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_free_block, Free* next_free_block);
 	Free* CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_block);
 	Free* CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block);
 
 	void UpdateHeapStatisticsAfterPerfectMalloc(const uint32_t malloc_size);
 	void UpdateHeapStatisticsAfterPartialMalloc(const uint32_t malloc_size);
-	void UpdateHeapStatisticsAfterFree(const uint32_t free_size);
+	//void UpdateHeapStatisticsAfterFree(const uint32_t free_size);
 
 private:
 	Heap	*pHeap;
