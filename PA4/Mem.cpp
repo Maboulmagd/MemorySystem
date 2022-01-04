@@ -25,21 +25,21 @@ struct SecretPtr final {
 
 void Mem::initialize() {
 
-	Free* free_hdr_start = static_cast<Free*>(pHeap->mStats.heapTopAddr);
-	Free* free_hdr_end = free_hdr_start + 1;
+	Free* const free_hdr_start = static_cast<Free*>(pHeap->mStats.heapTopAddr);
+	//Free* free_hdr_end = free_hdr_start + 1;
 
-	const uint32_t heap_bottom_addr_int = reinterpret_cast<uint32_t>(pHeap->mStats.heapBottomAddr);
-	const uint32_t free_hdr_end_int = reinterpret_cast<uint32_t>(free_hdr_end);
+	//const uintptr_t heap_bottom_addr_int = reinterpret_cast<uintptr_t>(pHeap->mStats.heapBottomAddr);
+	const uintptr_t free_hdr_end_int = reinterpret_cast<uintptr_t>(free_hdr_start + 1);
 
-	const uint32_t block_size = heap_bottom_addr_int - free_hdr_end_int;
+	const uintptr_t block_size = reinterpret_cast<uintptr_t>(pHeap->mStats.heapBottomAddr) - free_hdr_end_int;
 
 	// Construct Free block at 0x30 (48) with size
 	pHeap->pFreeHead = placement_new(free_hdr_start, Free, block_size);
 	pHeap->pNextFit = pHeap->pFreeHead;// Have the next fit ptr point to the start of the Free hdr
 
 	// Place secret ptr
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(free_hdr_end_int + block_size - sizeof(SecretPtr));
-	placement_new(secret_ptr_addr, SecretPtr, pHeap->pFreeHead);
+	//Free* secret_ptr_addr = reinterpret_cast<Free*>(free_hdr_end_int + block_size - sizeof(SecretPtr));
+	placement_new(reinterpret_cast<Free*>(free_hdr_end_int + block_size - sizeof(SecretPtr)), SecretPtr, pHeap->pFreeHead);
 	//Trace::out("secret_ptr address: %p\n", secret_ptr);
 
 	// Update heap statistics
@@ -54,16 +54,13 @@ void* Mem::malloc(const uint32_t size) {
 	if (next_fit != nullptr) {
 		if (next_fit->mBlockSize == size) {// Case 1: perfect fit!
 
-			Free* next_free_block = next_fit->pFreeNext;
+			Free* const next_free_block = next_fit->pFreeNext;// Get next free block from our free list prior to removing the free block from our free list
 
 			RemoveFreeBlock(next_fit);// Update free block list
 
-			Used* used_block = placement_new(next_fit, Used, size);
+			Used* const used_block = static_cast<Used*>(static_cast<void*>(next_fit));
+			used_block->mType = Block::Used;
 			InsertUsedBlock(used_block);
-
-			// TODO Check if used_block is the head of the used list. If it is NOT, then update mAboveBlockFree flag for used_block...use the USED block list
-			//		to determine whether there exists a previous USED block, and if so, use pointer arithmetic to check if it is directly above us,
-			//		if it is NOT, then we KNOW FOR A FACT that the block directly above used_block MUST be a free block, and so set the mAboveBlockFlag to true.
 
 			// Update next fit
 			next_fit = next_free_block;
@@ -72,30 +69,41 @@ void* Mem::malloc(const uint32_t size) {
 			// Update heap statistics
 			UpdateHeapStatisticsAfterPerfectMalloc(size);
 
-			return reinterpret_cast<void*>(used_block + 1); // return the END of used header to the newly constructed used block.
+			return static_cast<void*>(used_block + 1); // return the END of used header to the newly constructed used block.
 		}
 
 		else if (next_fit->mBlockSize > size) {// Case 2: Free block has more space than required, will need to create a free block
 
 			// First, we get all the information we need to construct the free block after we construct the used block
-			Free* new_free_block_hdr_start = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(next_fit + 1) + size);
-			Free* new_free_block_hdr_end = new_free_block_hdr_start + 1;// This is of course also just the start of the free block
-			const uint32_t new_free_block_size = next_fit->mBlockSize - size - sizeof(Free);// New free block's memory EXCLUDING its hdr
+			const uintptr_t new_free_block_hdr_start = reinterpret_cast<uintptr_t>(next_fit + 1) + size;
+			//const uintptr_t new_free_block_hdr_end = new_free_block_hdr_start + sizeof(Free);// This is of course also just the start of the free block
+			const uintptr_t new_free_block_size = next_fit->mBlockSize - size - sizeof(Free);// New free block's memory EXCLUDING its hdr
 
-			// Now we can completely remove the free block from the free block list, SAFELY
+			Free* const prev_free_block = next_fit->pFreePrev;
+			Free* const next_free_block = next_fit->pFreeNext;
+
+			// Now we can remove the free block from the free block list
 			RemoveFreeBlock(next_fit);
 
-			// Now, we can safely create the USED block, and insert it into the used block list
-			Used* used_block = placement_new(next_fit, Used, size);
+			// Now, we can "make" a USED block, and insert it into the used block list
+			Used* const used_block = static_cast<Used*>(static_cast<void*>(next_fit));
+			used_block->mBlockSize = size;
+			used_block->mType = Block::Used;
 			InsertUsedBlock(used_block);
 
-			// TODO Check if used_block is the head of the used list. If it is NOT, then update mAboveBlockFree flag for used_block...use the USED block list
-			//		to determine whether there exists a previous USED block, and if so, use pointer arithmetic to check if it is directly above us,
-			//		if it is NOT, then we KNOW FOR A FACT that the block directly above used_block MUST be a free block, and so set the mAboveBlockFlag to true.
-
 			// Now, we can safely create the FREE block, and insert it into the free block list, which is sorted in ascending order of memory address!
-			Free* new_free_block = placement_new(new_free_block_hdr_start, Free, new_free_block_size);
-			InsertFreeBlock(new_free_block);
+			Free* const new_free_block = placement_new(reinterpret_cast<Free*>(new_free_block_hdr_start), Free, new_free_block_size);
+			new_free_block->pFreePrev = prev_free_block;
+			if (prev_free_block != nullptr) {
+				prev_free_block->pFreeNext = new_free_block;
+			}
+			else {
+				pHeap->pFreeHead = new_free_block;
+			}
+			new_free_block->pFreeNext = next_free_block;
+			if (next_free_block != nullptr) {
+				next_free_block->pFreePrev = new_free_block;
+			}
 
 			// NOTE: We know that the block directly above new_free_block is NOT a free block, so leave the mAboveBlockFlag as is (false).
 			//		 We ALSO know that the block directly below this new free block (if we're not at the end of the heap) CANNOT be a free block, since 
@@ -106,15 +114,15 @@ void* Mem::malloc(const uint32_t size) {
 			pHeap->pNextFit = next_fit;
 
 			// Let's also place the secret ptr for our newly created free block
-			Free* new_free_block_end = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_free_block_hdr_end) + new_free_block_size);
-			Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_free_block_end) - sizeof(SecretPtr));
-			placement_new(secret_ptr_addr, SecretPtr, new_free_block);
+			//const uintptr_t new_free_block_end = new_free_block_hdr_end + new_free_block_size;
+			//Free* const secret_ptr_addr = reinterpret_cast<Free*>(new_free_block_end - sizeof(SecretPtr));
+			placement_new(reinterpret_cast<Free*>(((new_free_block_hdr_start + sizeof(Free)) + new_free_block_size) - sizeof(SecretPtr)), SecretPtr, new_free_block);
 			//Trace::out("secret_ptr address: %p\n", secret_ptr);
 
 			// Finally let's update the heap statistics, taking into account removal of free block, insertion of used block, and insertion of a free block!
 			UpdateHeapStatisticsAfterPartialMalloc(size);
 
-			return reinterpret_cast<void*>(used_block + 1);
+			return static_cast<void*>(used_block + 1);
 		}
 	}
 
@@ -124,80 +132,87 @@ void* Mem::malloc(const uint32_t size) {
 void Mem::free(void * const data) {
 
 	// NOTE Can't grab secret ptr from block above, UNLESS I know for sure that its a free block. To do that, we can remove the used block that we're required
-	//		to remove anyway from our USED list. After that, we can create a free block in the exact same place, along with its secret ptr,
-	//		and set next fit to point to it (ONLY if next fit is currently null), and insert the block in our free list. Don't forget to update heap stats. 
-	//		ONLY than can we use our free list to determine whether there is a previous free block
-	//		(if there isn't that means that we're the first one in the free list, AKA the freeHead). If there
-	//		exists a previous free block, then we can use pointer arithmetic to determine whether it is directly above us,
-	//		and then set the mAboveBlockFree flag of the newly created FREE block accordingly.
+	//		to remove anyway from our USED list, but BEFORE doing so, if our used block's mAboveBlockFree flag was set to TRUE when we free'd the block above us,
+	//		then we can very simply grab the secret ptr above us and then get hold of the free block above us.
 	//		As a sidenote, it is simple to check if the block below us is also a free block, just by using pointer arithmetic. Then we can SAFELY determine whether
 	//		we need to coalesce with the block above, block below, both below and above, or none at all!
 
+	Used* const used_block_hdr_start = reinterpret_cast<Used*>(data) - 1;
 	//Used* used_block_hdr_end = reinterpret_cast<Used*>(data);
-	Used* used_block_hdr_start = reinterpret_cast<Used*>(data) - 1;
 	const uint32_t used_block_size = used_block_hdr_start->mBlockSize;// This will also just be the size of new_free_block
 
+	// Try to see if we are adjacent to any FREE blocks (either above, below, or maybe even both)! This is to try to avoid looping to insert the free block that we will create instead of the used block that we're free'ing
+	Free* free_block_above_used = nullptr;
+	bool block_above_is_free = false;
+	if (used_block_hdr_start->mAboveBlockFree) {
+		block_above_is_free = true;
+		SecretPtr* secret_ptr_for_above_block = reinterpret_cast<SecretPtr*>(reinterpret_cast<uint32_t>(used_block_hdr_start) - sizeof(SecretPtr));
+		free_block_above_used = secret_ptr_for_above_block->pFree;
+	}
+	
+	// I am just using Free* here, but I could've used Used*...
+	Free* free_block_below_used = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(data) + used_block_size);
+	bool block_below_is_free = false;
+	if (free_block_below_used < pHeap->mStats.heapBottomAddr) {
+		if (free_block_below_used->mType == Block::Free) {
+			block_below_is_free = true;
+			// NOTE Could set mAboveBlockFree flag here for free_block_below_used to true, but its useless, since we'll be coalescing with it anyways!
+		}
+		else if (free_block_below_used->mType == Block::Used) {
+			free_block_below_used->mAboveBlockFree = true;
+		}
+	}
+	
 	// Now let's remove the used block from our used block list
 	RemoveUsedBlock(used_block_hdr_start);
 
-	// Now we can safely create our new free block to take the place of the used block we just removed, along with its secret ptr
-	Free* new_free_block = placement_new(used_block_hdr_start, Free, used_block_size);
-	Free* new_free_block_end = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_free_block + 1) + used_block_size);
-
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_free_block_end) - sizeof(SecretPtr));
-	placement_new(secret_ptr_addr, SecretPtr, new_free_block);
-	//Trace::out("secret_ptr address: %p\n", secret_ptr);
-
-	// Update next fit, if need be
-	if (pHeap->pNextFit == nullptr) {
-		pHeap->pNextFit = new_free_block;
-	}
+	// Now let's update our heap's statistics
+	pHeap->mStats.currUsedMem -= used_block_size;
+	pHeap->mStats.currNumUsedBlocks -= 1;
 
 	// Now let's insert the newly created free block in our free list
-	InsertFreeBlock(new_free_block);
+	if (!block_above_is_free && !block_below_is_free) {
+		// Now we can safely create our new free block to take the place of the used block we just removed, along with its secret ptr
+		Free* new_free_block = placement_new(used_block_hdr_start, Free, used_block_size);
+		//const uintptr_t new_free_block_end = reinterpret_cast<uintptr_t>(new_free_block + 1) + used_block_size;
 
-	// Now let's update our heap's statistics
-	UpdateHeapStatisticsAfterFree(used_block_size);
+		//Free* secret_ptr_addr = reinterpret_cast<Free*>(new_free_block_end - sizeof(SecretPtr));
+		placement_new(reinterpret_cast<Free*>(reinterpret_cast<uintptr_t>(new_free_block + 1) + used_block_size - sizeof(SecretPtr)), SecretPtr, new_free_block);
+		//Trace::out("secret_ptr address: %p\n", secret_ptr);
 
-	// Now we can check our free list to see if the prev free block, if there exists one (new_free_block isn't the head of our free list)
-	// is directly above our newly created free block, and don't forget to update the mAboveBlockFree flag for prev_free_block
-	bool coalesce_with_above_free_block = false;
-	if (new_free_block != pHeap->pFreeHead) {
-		Free* prev_free_block = new_free_block->pFreePrev;
-		Free* prev_free_block_end = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(prev_free_block + 1) + prev_free_block->mBlockSize);
-		
-		if (prev_free_block_end == new_free_block) {
-			coalesce_with_above_free_block = true;
-			new_free_block->mAboveBlockFree = true;
+		// Update next fit, if need be
+		if (pHeap->pNextFit == nullptr) {
+			pHeap->pNextFit = new_free_block;
 		}
+
+		// No option but to insert our free block in the free sorted list via looping
+		InsertFreeBlock(new_free_block);
+
+		// Now let's update our heap's statistics
+		pHeap->mStats.currFreeMem += used_block_size;// Think about it, currFreeMem will gain the size of the used block we just removed
+		pHeap->mStats.currNumFreeBlocks += 1;// We inserted 1 free block
 	}
 
-	// Check if we also need to coalesce with the next free block, if there exists one (new_free_block isn't the tail of our free list) is directly below our newly
-	// created free block, and dont forget to update the mAboveBlockFree flag for next_free_block
-	bool coalesce_with_below_free_block = false;
-	Free* next_free_block = new_free_block->pFreeNext;
-	if (next_free_block != nullptr && next_free_block == new_free_block_end) {
-		coalesce_with_below_free_block = true;
-		next_free_block->mAboveBlockFree = true;
-	}
-	// If the block directly below new_free_block is a USED block, set its mAboveBlockFree flag to true
-	else if (new_free_block_end < pHeap->mStats.heapBottomAddr) {
-		Used* used_block_below_new_free_block = reinterpret_cast<Used*>(new_free_block_end);
-		if (used_block_below_new_free_block->mType == Block::Used) {
-			used_block_below_new_free_block->mAboveBlockFree = true;
-		}
+	else if (block_above_is_free && block_below_is_free) {
+		CoalesceWithAboveAndBelowFreeBlocks(free_block_above_used, reinterpret_cast<Free*>(used_block_hdr_start), free_block_below_used);
+
+		// Now let's update our heap's statistics
+		pHeap->mStats.currFreeMem += used_block_size + (sizeof(Free) * 2);// We removed 1 free block, and the 1 used block, so we add sizes of the headers, and we also add used_block_size
+		pHeap->mStats.currNumFreeBlocks -= 1;// We removed free_block_below_used
 	}
 
-	if (coalesce_with_above_free_block && coalesce_with_below_free_block) {
-		CoalesceWithAboveAndBelowFreeBlocks(new_free_block->pFreePrev, new_free_block, new_free_block->pFreeNext);
+	else if (block_above_is_free) {
+		CoalesceWithAboveFreeBlock(free_block_above_used, reinterpret_cast<Free*>(used_block_hdr_start));
+
+		// Now let's update our heap's statistics
+		pHeap->mStats.currFreeMem += used_block_size + sizeof(Used);// We add the 1 used block's header size, and used_block_size
 	}
 
-	else if (coalesce_with_above_free_block) {
-		CoalesceWithAboveFreeBlock(new_free_block->pFreePrev, new_free_block);
-	}
+	else if (block_below_is_free) {
+		CoalesceWithBelowFreeBlock(reinterpret_cast<Free*>(used_block_hdr_start), free_block_below_used);
 
-	else if (coalesce_with_below_free_block) {
-		CoalesceWithBelowFreeBlock(new_free_block, new_free_block->pFreeNext);
+		// Now let's update our heap's statistics
+		pHeap->mStats.currFreeMem += used_block_size + sizeof(Free);// We added the size of the 1 removed free hdr, and used_block_size
 	}
 }
 
@@ -212,15 +227,9 @@ Free* Mem::GetFreeBlock(const uint32_t block_size_required) {
 
 	Free* next_fit = pHeap->pNextFit;
 
-	Heap* top_of_heap = reinterpret_cast<Heap*>(reinterpret_cast<uint32_t>(pHeap->mStats.heapTopAddr) - sizeof(Heap));
-	if (next_fit == reinterpret_cast<Free*>(top_of_heap)) {
-		return nullptr;
-	}
-
-	Free* last_addr_we_started_searching_from = next_fit;
+	const Free* const last_addr_we_started_searching_from = next_fit;
 
 	bool found = false;
-	//Free* heap_bottom_addr = static_cast<Free*>(pHeap->mStats.heapBottomAddr);
 	while (next_fit != nullptr/* && next_fit != heap_bottom_addr*/) {
 		if (next_fit->mBlockSize >= block_size_required) {// this block is available
 			found = true;
@@ -268,6 +277,10 @@ void Mem::RemoveFreeBlock(Free* free_block_to_remove) {
 
 void Mem::InsertUsedBlock(Used* used_block_to_insert) {
 
+	// First, let's null out the next/prev ptr's for correctness (make sure we are working with a clean block)
+	used_block_to_insert->pUsedNext = nullptr;
+	used_block_to_insert->pUsedPrev = nullptr;
+
 	if (pHeap->pUsedHead == nullptr) {// Case 1: Very first allocation (used block)
 		pHeap->pUsedHead = used_block_to_insert;
 		return;
@@ -301,19 +314,6 @@ void Mem::UpdateHeapStatisticsAfterPartialMalloc(const uint32_t malloc_size) {
 
 	pHeap->mStats.peakUsedMemory = max(pHeap->mStats.peakUsedMemory, pHeap->mStats.currUsedMem);
 	pHeap->mStats.peakNumUsed = max(pHeap->mStats.peakNumUsed, pHeap->mStats.currNumUsedBlocks);
-}
-
-void Mem::UpdateHeapStatisticsAfterFree(const uint32_t free_size) {
-
-	pHeap->mStats.currFreeMem += free_size;
-	pHeap->mStats.currNumFreeBlocks += 1;
-
-	pHeap->mStats.currUsedMem -= free_size;
-	pHeap->mStats.currNumUsedBlocks -= 1;
-
-	// Well, these shouldn't change, since we are FREE'ING memory...
-	//pHeap->mStats.peakUsedMemory = max(pHeap->mStats.peakUsedMemory, pHeap->mStats.currUsedMem);
-	//pHeap->mStats.peakNumUsed = max(pHeap->mStats.peakNumUsed, pHeap->mStats.currNumUsedBlocks);
 }
 
 void Mem::InsertFreeBlock(Free* free_block_to_insert) {
@@ -385,10 +385,11 @@ void Mem::RemoveUsedBlock(Used* used_block_to_remove) {
 
 Free* Mem::CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_free_block, Free* next_free_block) {
 
-	// So the idea here is to remove all 3 free blocks from our FREE list, and just create 1 large free block in their place (just 1 FREE hdr)
+	// So the idea here is to remove next_free_block from our FREE list, and just extend (increase) prev_free_block's size, taking into account the used block (new_free_block) and its header, as well as next_free_block's header
+	const bool block_above_prev_free_block_is_free = prev_free_block->mAboveBlockFree;
 
-	Free* new_large_free_block = prev_free_block;// The address of our new large free block will be here
-	// The size of our new_large_free_block has to INCLUDE the size of 2 FREE hdrs, but EXCLUDE the size of its OWN FREE hdr
+	Free* const new_large_free_block = prev_free_block;// The address of our new large free block will be here
+	// The size of our new_large_free_block has to INCLUDE the size of 1 FREE hdr, 1 USED hdr, but EXCLUDE the size of its OWN FREE hdr
 	const uint32_t new_large_free_block_size = prev_free_block->mBlockSize + new_free_block->mBlockSize + next_free_block->mBlockSize + (sizeof(Free) * 2);
 
 	// Check if we'll need to update our next fit ptr to point to new_large_free_block at the end
@@ -397,28 +398,23 @@ Free* Mem::CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_
 		update_next_fit_ptr = true;
 	}
 
-	// TODO Check out a new branch, call it optimizations, and I think a great optimization is to add new free blocks to the free list in a smarter way.
-	//		In this case, we know that we are coalescing 3 free blocks, and so, we just need to grab the previous free block of prev_free_block, and the next free block
-	//		of next_free_block, and insert our new_large_free_block, between those 2 free blocks, so as to avoid looping through the free block list to insert it!
+	Free* const next_next_free_block = next_free_block->pFreeNext;
 
-	// Now remove all 3 FREE blocks from our free list
-	RemoveFreeBlock(prev_free_block);
-	RemoveFreeBlock(new_free_block);
+	// Now remove next_free_block from our free list
 	RemoveFreeBlock(next_free_block);
 
-	// Create the new large free block, along with its secret ptr and insert it
-	new_large_free_block = placement_new(new_large_free_block, Free, new_large_free_block_size);
+	new_large_free_block->mBlockSize = new_large_free_block_size;
+	new_large_free_block->mAboveBlockFree = block_above_prev_free_block_is_free;
 
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr));
-	placement_new(secret_ptr_addr, SecretPtr, new_large_free_block);
+	//const uintptr_t secret_ptr_addr = reinterpret_cast<uintptr_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr);
+	placement_new(reinterpret_cast<Free*>(reinterpret_cast<uintptr_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr)), SecretPtr, new_large_free_block);
 	//Trace::out("secret_ptr address: %p\n", secret_ptr);
 
-	// Now let's insert new_large_free_block in our free list
-	InsertFreeBlock(new_large_free_block);
-
-	// Update the heap statistics!
-	pHeap->mStats.currFreeMem += (sizeof(Free) * 2);// Think about it, currFreeMem will stay the same, but only increase in size since we REMOVED 2 FREE hdrs
-	pHeap->mStats.currNumFreeBlocks -= 2;// We removed 3 free blocks, and then inserted 1 free block
+	// Update new_large_free_block's pFreeNext ptr to point to next_next_free_block, and next_next_free_block's pFreePrev ptr to point to new_large_free_block, when applicable
+	new_large_free_block->pFreeNext = next_next_free_block;
+	if (next_next_free_block != nullptr) {
+		next_next_free_block->pFreePrev = new_large_free_block;
+	}
 
 	// Update the next fit ptr, if need be
 	if (update_next_fit_ptr) {
@@ -430,35 +426,25 @@ Free* Mem::CoalesceWithAboveAndBelowFreeBlocks(Free* prev_free_block, Free* new_
 
 Free* Mem::CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_block) {
 
-	// The idea here is to remove both FREE blocks from our FREE list, and just create 1 large free block in their place (just 1 FREE hdr)
-
-	Free* new_large_free_block = prev_free_block;// The address of our new large free block will be here
+	// So the idea here is to just extend (increase) prev_free_block's size, taking into account the used block (new_free_block) and its header
+	const bool block_above_prev_free_block_is_free = prev_free_block->mAboveBlockFree;
+	
+	Free* const new_large_free_block = prev_free_block;// The address of our new large free block will be here
 	// The size of our new_large_free_block has to INCLUDE the size of 1 FREE hdr, but EXCLUDE the size of its OWN FREE hdr
 	const uint32_t new_large_free_block_size = prev_free_block->mBlockSize + new_free_block->mBlockSize + sizeof(Free);
 
 	// Check if we'll need to update our next fit ptr to point to new_large_free_block at the end
 	bool update_next_fit_ptr = false;
-	if (pHeap->pNextFit == nullptr || pHeap->pNextFit == new_free_block) {
+	if (pHeap->pNextFit == nullptr) {
 		update_next_fit_ptr = true;
 	}
 
-	// Now remove prev_free_block and new_free_block from our free list
-	RemoveFreeBlock(prev_free_block);
-	RemoveFreeBlock(new_free_block);
+	new_large_free_block->mBlockSize = new_large_free_block_size;
+	new_large_free_block->mAboveBlockFree = block_above_prev_free_block_is_free;
 
-	// Create the new large free block, along with its secret ptr
-	new_large_free_block = placement_new(new_large_free_block, Free, new_large_free_block_size);
-
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr));
-	placement_new(secret_ptr_addr, SecretPtr, new_large_free_block);
+	//const uintptr_t secret_ptr_addr = reinterpret_cast<uintptr_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr);
+	placement_new(reinterpret_cast<Free*>(reinterpret_cast<uintptr_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr)), SecretPtr, new_large_free_block);
 	//Trace::out("secret_ptr address: %p\n", secret_ptr);
-
-	// Now let's insert new_large_free_block in our free list
-	InsertFreeBlock(new_large_free_block);
-
-	// Update the heap statistics!
-	pHeap->mStats.currFreeMem += sizeof(Free);// Think about it, currFreeMem will stay the same, but only increase in size since we REMOVED 1 FREE hdr
-	pHeap->mStats.currNumFreeBlocks -= 1;// We removed 2 free blocks, and then inserted 1 free block
 
 	// Update the next fit ptr, if need be
 	if (update_next_fit_ptr) {
@@ -470,8 +456,8 @@ Free* Mem::CoalesceWithAboveFreeBlock(Free* prev_free_block, Free* new_free_bloc
 
 Free* Mem::CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_block) {
 
-	// The idea here is to remove both FREE blocks from our FREE list, and just create 1 large free block in their place (just 1 FREE hdr)
-	
+	// The idea here is to remove next_free_block from our FREE list, and just create 1 large free block at new_free_block, and insert it into our FREE list
+
 	Free* new_large_free_block = new_free_block;// The address of our new large free block will be here
 	// The size of our new_large_free_block has to INCLUDE the size of 1 FREE hdr, but EXCLUDE the size of its OWN FREE hdr
 	const uint32_t new_large_free_block_size = new_free_block->mBlockSize + next_free_block->mBlockSize + sizeof(Free);
@@ -482,23 +468,31 @@ Free* Mem::CoalesceWithBelowFreeBlock(Free* new_free_block, Free* next_free_bloc
 		update_next_fit_ptr = true;
 	}
 
-	// Now remove prev_free_block and new_free_block from our free list
-	RemoveFreeBlock(new_free_block);
+	Free* const prev_free_block = next_free_block->pFreePrev;
+	Free* const next_next_free_block = next_free_block->pFreeNext;
+
+	// Now remove next_free_block from our free list
 	RemoveFreeBlock(next_free_block);
 
 	// Create the new large free block, along with its secret ptr
 	new_large_free_block = placement_new(new_large_free_block, Free, new_large_free_block_size);
 
-	Free* secret_ptr_addr = reinterpret_cast<Free*>(reinterpret_cast<uint32_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr));
-	placement_new(secret_ptr_addr, SecretPtr, new_large_free_block);
+	//const uintptr_t secret_ptr_addr = reinterpret_cast<uintptr_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr);
+	placement_new(reinterpret_cast<Free*>(reinterpret_cast<uintptr_t>(new_large_free_block + 1) + new_large_free_block_size - sizeof(SecretPtr)), SecretPtr, new_large_free_block);
 	//Trace::out("secret_ptr address: %p\n", secret_ptr);
 
 	// Now let's insert new_large_free_block in our free list
-	InsertFreeBlock(new_large_free_block);
-
-	// Update the heap statistics!
-	pHeap->mStats.currFreeMem += sizeof(Free);// Think about it, currFreeMem will stay the same, but only increase in size since we REMOVED 1 FREE hdr
-	pHeap->mStats.currNumFreeBlocks -= 1;// We removed 2 free blocks, and then inserted 1 free block
+	new_large_free_block->pFreePrev = prev_free_block;
+	if (prev_free_block != nullptr) {
+		prev_free_block->pFreeNext = new_large_free_block;
+	}
+	else {
+		pHeap->pFreeHead = new_large_free_block;
+	}
+	new_large_free_block->pFreeNext = next_next_free_block;
+	if (next_next_free_block != nullptr) {
+		next_next_free_block->pFreePrev = new_large_free_block;
+	}
 
 	// Update the next fit ptr, if need be
 	if (update_next_fit_ptr) {
